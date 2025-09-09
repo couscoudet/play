@@ -3,18 +3,18 @@ FROM n8nio/n8n:latest
 # Switch to root to perform privileged operations
 USER root
 
-# Check current user and create npm global directory
-RUN whoami \
-    && mkdir -p /home/node/.npm-global \
-    && chown -R node:node /home/node/.npm-global || chown -R $(whoami):$(whoami) /home/node/.npm-global \
-    && npm config set prefix '/home/node/.npm-global'
+# Fix npm permissions for global installs
+RUN mkdir -p /home/node/.npm-global \
+    && chown -R node:node /home/node/.npm-global
 
-# Add npm global bin to PATH
-ENV PATH="/home/node/.npm-global/bin:$PATH"
-
-# Switch back to the appropriate user
+# Switch to node user
 USER node
 
-# Install Playwright and its browsers
-RUN npm install -g playwright@latest \
-    && npx playwright install --with-deps
+# Configure npm prefix for the node user and install Playwright
+RUN npm config set prefix '/home/node/.npm-global' \
+    && export PATH="/home/node/.npm-global/bin:$PATH" \
+    && npm install -g playwright@latest \
+    && /home/node/.npm-global/bin/npx playwright install --with-deps
+
+# Add npm global bin to PATH for runtime
+ENV PATH="/home/node/.npm-global/bin:$PATH"
